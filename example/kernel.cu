@@ -1,5 +1,5 @@
 #include "kernel.hpp"
-
+#include <cuda_runtime_api.h>
 #include <iostream>
 
 #define CUDA_CHECK(expr)                                                \
