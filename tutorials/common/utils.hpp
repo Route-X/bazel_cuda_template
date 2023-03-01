@@ -1,4 +1,5 @@
 #include <cuda_runtime_api.h>
+#include <random>
 
 namespace common
 {
@@ -45,4 +46,39 @@ static void run2NestedBranchesForNSteps(int N)
 	 cudaDeviceSynchronize();
 }
 
+
+// Helper function to let threads spin
+__device__ void waste_time(unsigned long long duration)
+{
+    const unsigned long long int start = clock64();
+    while ((clock64() - start) < duration);
+}
+
+__device__ float gregory_leibniz(unsigned int iterations)
+{
+    float pi = 0.f, m = 1.f;
+    for (int n = 0; n < iterations; n++, m *= -1.f)
+    {
+        pi += 4.f * (m / (2 * n + 1));
+    }
+    return pi;
+}
+
+static void prepare_random_numbers_cpu_gpu(unsigned int N, std::vector<float>& vals, float** dValsPtr)
+{
+	constexpr float target = 42.f;
+	// Print expected value, because reference may be off due to floating point (im-)precision
+	std::cout << "\nExpected value: " << target * N << "\n" << std::endl;
+
+	// Generate a few random inputs to accumulate
+	std::default_random_engine eng(0xcaffe);
+	std::normal_distribution<float> dist(target);
+	vals.resize(N);
+	std::for_each(vals.begin(), vals.end(), [&dist, &eng](float& f) { f = dist(eng); });
+
+	// Allocate some global GPU memory to write the inputs to
+	cudaMalloc((void**)dValsPtr, sizeof(float) * N);
+	// Expliclity copy the inputs from the CPU to the GPU
+	cudaMemcpy(*dValsPtr, vals.data(), sizeof(float) * N, cudaMemcpyHostToDevice);
+}
 } // namespace common
