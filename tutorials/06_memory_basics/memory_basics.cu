@@ -23,6 +23,11 @@ __global__ void write_global_memory(int* __restrict d_output_ptr)
     *d_output_ptr = d_foo * d_foo;
 }
 
+__global__ void copy_from_constant_to_global_memory(int* __restrict d_output_ptr)
+{
+    *d_output_ptr = c_foo;
+}
+
 __device__ void write_and_print_shared_memory(int* s_foo)
 {
     // Write a computed result to shared memory for other threads to see
@@ -75,8 +80,12 @@ int main()
     cudaMalloc((void**)&d_output_ptr, sizeof(int));
     write_global_memory<<<1, 1>>>(d_output_ptr);
     cudaMemcpy(&out, d_output_ptr, sizeof(int), cudaMemcpyDeviceToHost);
-    cudaFree(d_output_ptr);
     std::cout << "CPU: copied back from GPU --> " << out << std::endl;
+
+    copy_from_constant_to_global_memory<<<1, 1>>>(d_output_ptr);
+    cudaMemcpy(&out, d_output_ptr, sizeof(int), cudaMemcpyDeviceToHost);
+    std::cout << "CPU: copied back from GPU --> " << std::hex << out << std::endl;
+    cudaFree(d_output_ptr);
 
     // For information that is shared only within a single threadblock, we can also use
     // shared memory, which is usually more efficient than global memory.
